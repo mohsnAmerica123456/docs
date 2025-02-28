@@ -1,19 +1,22 @@
 # Hoppscotch Documentation
 
-Docs are powered by [Docus](https://docus.dev).
-
 ## Local Development
+
+> [!IMPORTANT]
+> Please install Node.js (version 19 or higher) before proceeding.
 
 Install dependencies:
 
 ```bash
-pnpm install
+npm i -g mintlify
 ```
 
 Start development server with:
 
 ```bash
-pnpm run dev
+mintlify dev
 ```
 
-Start editing [conent](./content) directory!
+A local preview of your documentation will be available at `http://localhost:3000`.
+
+Read more about [Mintlify](https://mintlify.com/docs/development) to customize your documentation.

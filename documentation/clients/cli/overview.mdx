@@ -1,0 +1,247 @@
+---
+sidebarTitle: Overview
+title: Hoppscotch CLI
+description: Run tests, manage automated API monitoring, and more.
+---
+
+Hoppscotch gives you multiple ways to interact with and configure your APIs. With the command-line interface (CLI) you can interact with the Hoppscotch platform using a terminal, or through an automated system. This enables you to run API tests, manage automated API monitoring, and more.
+
+This section contains a complete list of all Hoppscotch CLI commands available, alongside their optional parameters for additional behavior. You can also find a complete list of configuration options to configure your APIs through Hoppscotch.
+
+<Info>Hoppscotch CLI is currently in alpha stage. Report a bug by [opening a new issue](https://github.com/hoppscotch/hoppscotch/issues/new/choose).</Info>
+
+## Pre-requisites
+Before installing the Hoppscotch CLI, ensure your system meets the following requirements.
+
+<AccordionGroup>
+  <Accordion title="Windows & macOS">
+    You will need `node-gyp` installed. Thus, follow the instructions from [node-gyp](https://github.com/nodejs/node-gyp).
+  </Accordion>
+
+  <Accordion title="Debian / Ubuntu derivatives">
+    Execute the following command:
+    ```
+    sudo apt-get install python g++ build-essential
+    ```
+  </Accordion>
+
+  <Accordion title="Alpine Linux">
+    Execute the following command:
+  ```
+  sudo apk add python3 make g++
+  ```
+  </Accordion>
+
+  <Accordion title="Amazon Linux (AMI)">
+    Execute the following command:
+  ```
+  sudo yum install gcc72 gcc72-c++
+  ```
+  </Accordion>
+
+  <Accordion title="Arch Linux">
+    Execute the following command:
+  ```
+  sudo pacman -S make gcc python
+  ```
+  </Accordion>
+
+  <Accordion title="RHEL / Fedora derivatives">
+    Execute the following command:
+  ```
+  sudo dnf install python3 make gcc gcc-c++ zlib-devel brotli-devel openssl-devel libuv-devel
+  ```
+  </Accordion>
+</AccordionGroup>
+
+## Installing Hoppscotch CLI
+
+Once the dependencies are installed, install @hoppscotch/cli from npm by running:
+
+```bash
+npm i -g @hoppscotch/cli
+```
+
+<Warning> The **minimum supported Node.js version** for the CLI is now **v20**.  If you're on Node.js v18 (EOL in April, 2025), you can continue using CLI `v0.11.1`. Future CLI versions will require Node.js v20 or higher. </Warning>
+## Commands
+
+### `hopp test`
+
+The `hopp test` command allows you to run tests against a Hoppscotch collection file.
+
+- The hopp test command recursively goes through each request in the collection and runs them, validating the responses with the test script provided in each request. Hence, the order of execution is the same as the order specified in the collection structure.
+- If upon executing the command, a failed assertion (a failing test case) has occurred, the command will give a non-zero exit code and 0 exit code if all tests have passed.
+- Unless there was a network error (for example, DNS resolution errors or network Connectivity Issues), the test script will be running and it is up to the test script to define what happens to error status codes. Non-200 status codes are still considered valid responses for test script execution.
+
+```bash
+hopp test [-e <environment file>] [-d <delay_in_ms> ] <hoppscotch collection file>
+```
+
+### Running Collections present on the API client
+
+The `hopp test` command can also be used to run collections present in your API client on Hoppscotch cloud or self-hosted platforms.
+Do note that you need to create a personal access token for your CLI to connect to your API client, and you can not run collections present in your personal workspace.
+
+```bash
+hopp test  [-e <environment id>] [-d <delay_i_ms>] <hoppscotch collection id> [--token <access_token>] [--server <server url>]
+```
+
+<Tip> You can directly copy the command with the auto-populated **Collection ID** and **Environment ID** by navigating to the **“CLI"** tab within the **“Run Collection”** action found in the context menu. </Tip>
+
+### Generate JUnit Report for Collection Runs
+
+The `hopp test` command now has the ability to generate a JUnit Report for collection runs in the CLI. The report is generated as an XML file at the specified path provided in the command. If no path is specified, the report will be saved in the working directory with the default name `hopp-junit-report.xml`.
+
+```bash
+hopp test <file_path_or_id> --env <file_path_or_id> --reporter-junit [path]
+```
+
+#### JUnit Report Format Overview
+
+The JUnit report generated for collection runs provides a structured summary of the test results. The table below provides a detailed breakdown of the JUnit report format, explaining the significance of each XML element:
+
+| Element	                      | Description                                                                                                                                                                                                                                                                                                             |                   
+| ------------------------------| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `<testsuites>`                | Root element representing the entire set of test suites.                                                                                                                                                                                                                                                                |
+| `<testsuite>`                 | Represents a collection of test cases for a specific request.                                                                                                                                                                                                                                                           |                                       
+| `<testcase>`                  | Represents an individual test case. It corresponds to `pw.expect()` assertions with the description prefixed by that of the test suite `pw.test()`.  It appears as a direct child of `<testsuite>`.                                                                                                                     |
+| `name`	                      | Attribute for `<testsuite>` and `<testcase>` elements. For `<testsuite>`, it indicates the hierarchy of collections up to the request. Organized at the request level using the naming convention: `<parent-collection-name>/<child-collection-name>/<request-name>`. While, for `<testcase>`, it'll be the description.|                                             
+| `classname`                   | Attribute of `<testcase>` that mirrors the `name` attribute of the parent `<testsuite>`.                                                                                                                                                                                                                                |
+| `<failure>`                   | Indicates an assertion failure within a `<testcase>`. Includes `type` and `message` attributes describing the failure.                                                                                                                                                                                                  |
+| `<error>`                     | Indicates an error during assertion within a `<testcase>`. Includes `message` attribute describing the error.                                                                                                                                                                                                           |
+| `<system-err>`                | Represents errors reported at the request level (e.g., invalid URL, reference error in the test script).  These errors are detailed within a `CDATA` section, with each error separated by newlines to ensure each issue is clearly identified.                                                                         |
+| `time`                        | Attribute of `<testsuite>` that shows the execution time for the test cases (excluding request execution time). The total time is at the root `<testsuites>`.                                                                                                                                                           |
+| `timestamp`                   | Attribute of `<testsuite>` that records the execution date and time in ISO string format.                                                                                                                                                                                                                               |
+| `tests`, `failures`, `errors` | Attributes of `<testsuite>` and `<testsuites>` that track the number of test cases, failed cases, and errors, at the request level and effective count at the root level test suite respectively. Set to `0` at a request level test suite, if errors halt further execution.                                           |
+
+### Arguments
+
+- `hoppscotch collection id` : Each collection created in a Hoppscotch workspace is given a unique identifier known as the Collection ID. Collection IDs for each collection can be found under **“Details”** tab inside Collection **“Properties”**.
+    
+- `environment id` : Similar to Collection IDs, each environment created in a Hoppscotch workspace is assigned a unique identifier known as the Environment ID.
+- `delay_i_ms` : Represents a time interval (in milliseconds) to pause execution of API requests before within a collection.
+- `access token` : It is a secure, unique identifier used to authenticate a user's access to their Hoppscotch account and its resources like collections, environments data. [Learn more about personal access tokens](/documentation/features/pat)
+- `server url` : This optional and is the URL of your self-hosted instance when you're self-hosting your API client
+- `path` : Accounts for a file path where the JUnit report will be saved as an XML file in your file system.
+- `no_of_iterations`: Indicates the number of iterations to run the collection. Each iteration will run the entire collection once, replacing any iteration-specific data defined by the `--iteration-data` flag (if provided).
+  
+  ```bash
+  hopp test <hoppscotch_collection_file_or_id> [--iteration-count <no_of_iterations>] [--iteration-data <file_path>]
+  ```
+
+- `file_path`: The path to the CSV file for iteration data. This file should follow the format:
+    
+    ```
+    key1,key2,key3
+    value1,value2,value3
+    value4,value5,value6
+    ```
+    
+    Each row in the CSV corresponds to an iteration, and the values from that row will replace the respective environment variables during the iteration. For example:
+
+    - **Iteration 1:** The values value1, value2, and value3 will be used.
+    - **Iteration 2:** The values value4, value5, and value6 will be used.
+
+### Example
+
+```bash
+hopp test kitchen-sink-hoppscotch-collection.json
+hopp test -e environment.json kitchen-sink-hoppscotch-collection.json
+hopp test -e environment.json -d 1000 kitchen-sink-hoppscotch-collection.json
+hopp test clxsntdgh0000lcx9fnits2h8 --token <access token> 
+hopp test -e clxspay2r0006lcx99aqgjbay -d 1000 clxsntdgh0000lcx9fnits2h8 --token <access token> --server http://localhost:3170
+hopp test -e environment.json kitchen-sink-hoppscotch-collection.json --reporter-junit kitchen-sink-junit.xml
+hopp test kitchen-sink-hoppscotch-collection.json --iteration-count 3 --iteration-data /path/to/iteration-data.csv
+```
+
+## Environment
+
+Hoppscotch allows templates in several places. For example, you could specify your endpoint URL as `<<baseurl>>/post` and specify baseurl as [`https://echo.hoppscotch.io`](https://echo.hoppscotch.io) in an environment file.
+
+Hoppscotch CLI supports environment files in two specific formats:
+
+### 1. Single Environment Entry Export Format
+
+This format is generated by Hoppscotch App when you export any of your environment. It includes a named environment (name) with key-value pairs, allowing you to define various variables within a single file.
+  ```json
+  {
+    "name": "my_env",
+    "variables": [
+      {
+        "key": "base_url",
+        "value": "https://echo.hoppscotch.io"
+      },
+      {
+        "key": "auth_token",
+        "value": "xxxxxxxxxxxx"
+      }
+    ]
+  }
+  ```
+### 2. Legacy Export Format
+
+Hoppscotch CLI continues to support the legacy format which was previously the only accepted format used by CLI.
+```json
+{
+  "key1": "value1",
+  "key2": "value2",
+  "key3": "value3"
+}
+```
+
+### 3. Environment ID
+
+To use an environment on your API client using its ID, click on the `Properties` action present in the **menu icon** next to each environment. Within the Details section, you'll find the **Environment ID**. Copy this ID and use it in the Hoppscotch CLI for execution.
+
+<Note>Please note that the Hoppscotch CLI exclusively supports the above three formats for importing environment variables. It **does not** offer compatibility with **Bulk Environment** exports or **any other export** format.</Note>
+
+## Secrets
+
+If requests in a collection consists of secret variables we recommend either of the two approaches.
+
+1. Inject the secret values as variables into the OS environment
+2. Edit the environment export file and add the secret values manually
+
+## Options
+
+| Option                      | Description                                                                                                       |
+| ----------------------------| ------------------------------------------------------------------------------------------------------------------|                    
+| `-h`                        | Gives a list of associated commands and their descriptions                                                        |
+| `-v`                        | Displays the current version of the CLI                                                                           |
+|`--env or -e`                | Accepts environments in all the formats present in [Environment section](/documentation/clients/cli#environment). |
+|`--delay` or `-d`            | Used to defer the execution of requests in a collection.                                                          |
+|`--token`                    | Expects a personal access token to be passed for establishing connection with your Hoppscotch account.            |
+|`--server`                   | URL of your self-hosted instance, if your collections are on a self-hosted instance.                              |
+|`--reporter-junit`           | Expects a file path to store the JUnit Report.                                                                    |    
+|`--iteration-count`          |	Defines the number of iterations to run the collection.                                                           |
+|`--iteration-data`	          | Accepts the path to a CSV file that contains iteration data.                                                      |             
+
+
+## Test Report Components
+
+
+Upon executing the commands, a comprehensive test report is generated, offering detailed insights into the performance of each request. Below, you'll find a breakdown of the components outlined in the test summary for the exported API Collection:
+
+<CardGroup cols={2}>
+  <Card title="Test Cases" icon="square-1">
+    Each instance of `pw.expect()` within the testScript of a request is considered a test case.
+  </Card>
+  <Card title="Test Suites" icon="square-2">
+    Each invocation of `pw.test()` within the testScript of a request is regarded as a test suite.
+  </Card>
+  <Card title="Test Scripts" icon="square-3">
+    The total number of `testScript` fields across all requests in the provided collection export file, representing the overall number of test scripts executed.
+  </Card>
+  <Card title="Test Duration" icon="square-4">
+    The total time taken to execute all test cases within the collection.
+  </Card>
+  <Card title="Requests" icon="square-5">
+    The total number of requests executed within the collection.
+  </Card>
+  <Card title="Requests Duration" icon="square-6">
+    The cumulative time taken to execute all requests within the collection.
+  </Card>
+  <Card title="Pre-request Scripts" icon="square-7">
+    The scripts executed prior to each request. The count matches the number of requests in the provided collection export file.
+  </Card>
+</CardGroup>
